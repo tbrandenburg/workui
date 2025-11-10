@@ -1,7 +1,173 @@
-import { Box, Text, render } from 'ink'
+import * as Command from '@effect/cli/Command'
+import * as Options from '@effect/cli/Options'
+import * as BunContext from '@effect/platform-bun/BunContext'
+import * as BunRuntime from '@effect/platform-bun/BunRuntime'
+import { createCliRenderer } from '@opentui/core'
+import {
+  createRoot,
+  useAppContext,
+  useKeyboard,
+  useTerminalDimensions,
+} from '@opentui/react'
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from '@tanstack/react-query'
+import * as Effect from 'effect/Effect'
+import * as Equal from 'effect/Equal'
+import * as Match from 'effect/Match'
+import * as Option from 'effect/Option'
+import * as Schema from 'effect/Schema'
+import { useCallback, useState, type ComponentProps } from 'react'
 
-render(
-  <Box>
-    <Text>Hello, world!</Text>
-  </Box>
+import * as Dialog from './Dialog'
+import { DialogKind } from './DialogKind'
+import { Issues } from './Issues'
+import { Keybindings } from './Keybindings'
+import { PullRequests } from './PullRequests'
+import * as Queries from './Queries'
+import { SplashScreen } from './SplashScreen'
+import * as View from './View'
+
+const useCurrentDialog = () => {
+  const [dialog, setDialog] = useState<Option.Option<DialogKind>>(Option.none())
+
+  const closeDialog = useCallback(() => {
+    setDialog(Option.none())
+  }, [])
+
+  const showDialog = useCallback(
+    (kind: DialogKind) => {
+      const newDialog = Option.some(kind)
+      if (Equal.equals(dialog, newDialog)) {
+        return
+      }
+      setDialog(newDialog)
+    },
+    [dialog]
+  )
+
+  return {
+    dialog,
+    closeDialog,
+    showDialog,
+  }
+}
+
+const App = ({ view: initialView }: { view: Option.Option<View.View> }) => {
+  const [view, setView] = useState<View.View>(() =>
+    Option.getOrElse(initialView, () => View.SplashScreen())
+  )
+
+  useQuery(Queries.currentDirectoryRepo())
+
+  const { dialog, showDialog, closeDialog } = useCurrentDialog()
+
+  const app = useAppContext()
+
+  const dimensions = useTerminalDimensions()
+
+  useKeyboard((key) => {
+    if (key.name === 'p') {
+      setView(View.PullRequests({ author: Option.none() }))
+    }
+    if (key.name === 'i') {
+      setView(View.Issues())
+    }
+    if (key.name === '`') {
+      app.renderer?.console.toggle()
+    }
+    if (key.name === '?') {
+      showDialog(DialogKind.Keybindings())
+    }
+    if (key.name === 'escape') {
+      if (Option.isSome(dialog)) {
+        closeDialog()
+      } else {
+        // TODO idk yet
+      }
+    }
+  })
+
+  return (
+    <box
+      {...dimensions}
+      position='relative'
+      flexDirection='column'
+      borderColor='gray'
+      borderStyle='rounded'
+      padding={1}
+    >
+      <box>
+        {Match.value(view).pipe(
+          Match.when({ _tag: 'SplashScreen' }, () => <SplashScreen />),
+          Match.when({ _tag: 'PullRequests' }, ({ author }) => (
+            <PullRequests author={author} />
+          )),
+          Match.when({ _tag: 'Issues' }, () => <Issues />),
+          Match.exhaustive
+        )}
+      </box>
+      {Option.map(
+        dialog,
+        DialogKind.$match({
+          Keybindings: () => (
+            <Dialog.Component onClose={closeDialog}>
+              <Keybindings />
+            </Dialog.Component>
+          ),
+        })
+      ).pipe(Option.getOrNull)}
+    </box>
+  )
+}
+
+const createQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: Infinity,
+      },
+    },
+  })
+
+const renderApp = (
+  props: ComponentProps<typeof App> = { view: Option.none() }
+) =>
+  Effect.tryPromise(async () => {
+    const renderer = await createCliRenderer({
+      useAlternateScreen: true,
+      useConsole: true,
+      consoleOptions: {
+        sizePercent: 50,
+      },
+    })
+
+    return createRoot(renderer).render(
+      <QueryClientProvider client={createQueryClient()}>
+        <App {...props} />
+      </QueryClientProvider>
+    )
+  })
+
+const ghui = Command.make('ghui', {}, () => renderApp())
+
+const ghuiPrs = Command.make(
+  'prs',
+  {
+    author: Options.text('author').pipe(
+      Options.withSchema(Schema.String),
+      Options.optional
+    ),
+  },
+  ({ author }) =>
+    renderApp({ view: Option.some(View.PullRequests({ author })) })
 )
+
+const cli = Command.run(ghui.pipe(Command.withSubcommands([ghuiPrs])), {
+  name: 'ghui',
+  version: 'v0.0.0-development',
+})
+
+cli(process.argv).pipe(Effect.provide(BunContext.layer), BunRuntime.runMain)
