@@ -1,5 +1,3 @@
-import * as Atom from '@effect-atom/atom/Atom'
-import * as BunContext from '@effect/platform-bun/BunContext'
 import * as Command from '@effect/platform/Command'
 import * as Effect from 'effect/Effect'
 import * as Option from 'effect/Option'
@@ -39,9 +37,3 @@ export class Repo extends Effect.Service<Repo>()('ghui/Repo', {
     }),
   }),
 }) {}
-
-export const repoRuntime = Atom.runtime(Repo.Default)
-
-export const currentRepoAtom = repoRuntime.atom(
-  Repo.currentRepo.pipe(Effect.provide(BunContext.layer))
-)
