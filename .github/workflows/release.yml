@@ -1,0 +1,138 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: build-${{ matrix.name }}
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      matrix:
+        include:
+          - name: macos-arm
+            runs-on: macos-latest
+            target: darwin-arm64
+          - name: linux-x64
+            runs-on: ubuntu-latest
+            target: linux-x64
+          - name: linux-arm
+            runs-on: ubuntu-24.04-arm
+            target: linux-arm64
+          - name: windows-x64
+            runs-on: windows-latest
+            target: windows-x64
+          # https://github.com/oven-sh/setup-bun/issues/130
+          # - name: windows-arm
+          #   runs-on: windows-11-arm
+          #   target: windows-arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-bun
+      - name: Build
+        run: bun build --compile --minify --sourcemap --target=bun-${{ matrix.target }} ./src/index.tsx --outfile dist/ghui-${{ matrix.target }}
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghui-${{ matrix.target }}
+          path: dist/ghui-${{ matrix.target }}*
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-tap:
+    name: Update Homebrew Tap
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Darwin ARM64
+        uses: actions/download-artifact@v4
+        with:
+          name: ghui-darwin-arm64
+          path: ./binaries
+      - name: Download Linux ARM64
+        uses: actions/download-artifact@v4
+        with:
+          name: ghui-linux-arm64
+          path: ./binaries
+      - name: Download Linux x64
+        uses: actions/download-artifact@v4
+        with:
+          name: ghui-linux-x64
+          path: ./binaries
+      - name: Download Windows x64
+        uses: actions/download-artifact@v4
+        with:
+          name: ghui-windows-x64
+          path: ./binaries
+
+      - name: Calculate SHA256
+        id: sha
+        run: |
+          echo "darwin_arm64=$(shasum -a 256 binaries/ghui-darwin-arm64 | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+          echo "linux_arm64=$(shasum -a 256 binaries/ghui-linux-arm64 | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+          echo "linux_x64=$(shasum -a 256 binaries/ghui-linux-x64 | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+          echo "windows_x64=$(shasum -a 256 binaries/ghui-windows-x64 | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+
+      - name: Get Version
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Checkout Tap Repository
+        uses: actions/checkout@v4
+        with:
+          repository: macklinu/homebrew-tap
+          token: ${{ secrets.TAP_GITHUB_TOKEN }}
+          path: tap
+
+      - name: Update Formula
+        run: |
+          cat > tap/Formula/ghui.rb << 'EOF'
+          class Ghui < Formula
+            desc "A TUI built on top of gh"
+            homepage "https://github.com/macklinu/ghui"
+            version "${{ steps.version.outputs.version }}"
+            url "https://github.com/macklinu/ghui/releases/download/v${{ steps.version.outputs.version }}/ghui-darwin-arm64"
+            sha256 "${{ steps.sha.outputs.darwin_arm64 }}"
+                        
+            def install
+              bin.install "ghui-darwin-arm64" => "ghui"
+            end
+            
+            test do
+              system "#{bin}/ghui", "--version"
+            end
+          end
+          EOF
+
+      - name: Commit and Push
+        run: |
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/ghui.rb
+          git commit -m "chore: update ghui to v${{ steps.version.outputs.version }}"
+          git push

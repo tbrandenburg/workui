@@ -21,6 +21,7 @@ import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 import { useCallback, useState, type ComponentProps } from 'react'
 
+import { version } from '../package.json'
 import * as Dialog from './Dialog'
 import { DialogKind } from './DialogKind'
 import { Issues } from './Issues'
@@ -167,7 +168,7 @@ const ghuiPrs = Command.make(
 
 const cli = Command.run(ghui.pipe(Command.withSubcommands([ghuiPrs])), {
   name: 'ghui',
-  version: 'v0.0.0-development',
+  version,
 })
 
 cli(process.argv).pipe(Effect.provide(BunContext.layer), BunRuntime.runMain)
