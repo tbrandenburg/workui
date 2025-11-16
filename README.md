@@ -15,6 +15,8 @@
 brew install macklinu/tap/ghui
 ```
 
+If you're looking for Windows or Linux builds, please check the [Releases page](https://github.com/macklinu/ghui/releases) for now and/or help me figure out how to publish the executables to [Linux](https://github.com/macklinu/ghui/issues/2) or [Windows](https://github.com/macklinu/ghui/issues/3) package managers.
+
 ## Usage
 
 Everything is built of top of [gh](https://cli.github.com/), so if you're authenticated via `gh auth login`, you should be able to view your GitHub (or GitHub Enterprise) repos with `ghui`.
