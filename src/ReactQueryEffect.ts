@@ -85,3 +85,85 @@ export const useSuspenseQuery = <
 
   return result
 }
+
+export interface UseEffectMutationOptions<
+  A,
+  E,
+  TVariables = void,
+  TOnMutateResult = unknown,
+> extends Omit<
+    RQ.UseMutationOptions<
+      Exit.Exit<A, E>,
+      Exit.Failure<A, E>,
+      TVariables,
+      TOnMutateResult
+    >,
+    'mutationFn' | 'onSuccess' | 'onError'
+  > {
+  mutationFn: (variables: TVariables) => Promise<Exit.Exit<A, E>>
+  onSuccess?: (
+    data: A,
+    variables: TVariables,
+    onMutateResult: TOnMutateResult,
+    context: RQ.MutationFunctionContext
+  ) => Promise<unknown> | unknown
+  onError?: (
+    error: Exit.Failure<A, E>,
+    variables: TVariables,
+    onMutateResult: TOnMutateResult | undefined,
+    context: RQ.MutationFunctionContext
+  ) => Promise<unknown> | unknown
+}
+
+export const useMutation = <A, E, TVariables = void, TOnMutateResult = unknown>(
+  options: UseEffectMutationOptions<A, E, TVariables, TOnMutateResult>
+): RQ.UseMutationResult<A, Exit.Failure<A, E>, TVariables, TOnMutateResult> => {
+  const { mutationFn, onSuccess, ...restOptions } = options
+
+  const wrappedMutationFn = async (
+    variables: TVariables
+  ): Promise<Exit.Exit<A, E>> => {
+    const exit = await mutationFn(variables)
+    if (Exit.isFailure(exit)) {
+      // Throw the failure so react-query treats it as an error
+      throw exit
+    }
+    return exit
+  }
+
+  const result = RQ.useMutation<
+    Exit.Exit<A, E>,
+    Exit.Failure<A, E>,
+    TVariables,
+    TOnMutateResult
+  >({
+    ...restOptions,
+    mutationFn: wrappedMutationFn,
+    onSuccess(data, variables, onMutateResult, context) {
+      if (Exit.isSuccess(data)) {
+        onSuccess?.(data.value, variables, onMutateResult, context)
+      }
+    },
+  })
+
+  if (result.isSuccess && result.data) {
+    if (Exit.isSuccess(result.data)) {
+      return {
+        ...result,
+        data: result.data.value,
+      } as RQ.UseMutationResult<
+        A,
+        Exit.Failure<A, E>,
+        TVariables,
+        TOnMutateResult
+      >
+    }
+  }
+
+  return result as RQ.UseMutationResult<
+    A,
+    Exit.Failure<A, E>,
+    TVariables,
+    TOnMutateResult
+  >
+}
