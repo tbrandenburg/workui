@@ -18,17 +18,13 @@ export const Keybindings = ({ view }: { view: View.View }) => (
               <text minWidth={4}>
                 <b>M</b>
               </text>
-              <text
-                attributes={TextAttributes.DIM}
-              >{`gh pr update-branch {number}`}</text>
+              <text attributes={TextAttributes.DIM}>{`gh pr update-branch {number}`}</text>
             </box>
             <box gap={1} flexDirection='row'>
               <text minWidth={4}>
                 <b>R</b>
               </text>
-              <text
-                attributes={TextAttributes.DIM}
-              >{`gh pr update-branch {number} --rebase`}</text>
+              <text attributes={TextAttributes.DIM}>{`gh pr update-branch {number} --rebase`}</text>
             </box>
           </box>
         ),

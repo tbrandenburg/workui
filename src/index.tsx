@@ -3,17 +3,8 @@ import * as Options from '@effect/cli/Options'
 import * as BunContext from '@effect/platform-bun/BunContext'
 import * as BunRuntime from '@effect/platform-bun/BunRuntime'
 import { createCliRenderer } from '@opentui/core'
-import {
-  createRoot,
-  useAppContext,
-  useKeyboard,
-  useTerminalDimensions,
-} from '@opentui/react'
-import {
-  QueryClient,
-  QueryClientProvider,
-  useQuery,
-} from '@tanstack/react-query'
+import { createRoot, useAppContext, useKeyboard, useTerminalDimensions } from '@opentui/react'
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
 import * as Match from 'effect/Match'
@@ -108,9 +99,7 @@ const App = ({ view: initialView }: { view: Option.Option<View.View> }) => {
       <box>
         {Match.value(view).pipe(
           Match.when({ _tag: 'SplashScreen' }, () => <SplashScreen />),
-          Match.when({ _tag: 'PullRequests' }, ({ author }) => (
-            <PullRequests author={author} />
-          )),
+          Match.when({ _tag: 'PullRequests' }, ({ author }) => <PullRequests author={author} />),
           Match.when({ _tag: 'Issues' }, () => <Issues />),
           Match.exhaustive
         )}
@@ -125,13 +114,7 @@ const App = ({ view: initialView }: { view: Option.Option<View.View> }) => {
           ),
         })
       ).pipe(Option.getOrNull)}
-      <box
-        position='absolute'
-        bottom={0}
-        right={0}
-        flexDirection='column-reverse'
-        maxWidth={64}
-      >
+      <box position='absolute' bottom={0} right={0} flexDirection='column-reverse' maxWidth={64}>
         {toasts.map((toast) => {
           const toastKindToIcon = {
             success: '✅',
@@ -168,10 +151,7 @@ const createQueryClient = () =>
   })
 
 const renderApp = (
-  {
-    repo,
-    ...props
-  }: ComponentProps<typeof App> & { repo: Option.Option<string> } = {
+  { repo, ...props }: ComponentProps<typeof App> & { repo: Option.Option<string> } = {
     view: Option.none(),
     repo: Option.none(),
   }
@@ -199,22 +179,14 @@ const ghui = Command.make('ghui', {}, () => renderApp())
 const ghuiPrs = Command.make(
   'prs',
   {
-    author: Options.text('author').pipe(
-      Options.withSchema(Schema.String),
-      Options.optional
-    ),
+    author: Options.text('author').pipe(Options.withSchema(Schema.String), Options.optional),
     repo: Options.text('repo').pipe(
-      Options.withSchema(
-        Schema.String.pipe(Schema.pattern(/^\w[\w.-]*\/\w[\w.-]*$/))
-      ),
-      Options.withDescription(
-        'The repo in org/repo format to set as the current repo context'
-      ),
+      Options.withSchema(Schema.String.pipe(Schema.pattern(/^\w[\w.-]*\/\w[\w.-]*$/))),
+      Options.withDescription('The repo in org/repo format to set as the current repo context'),
       Options.optional
     ),
   },
-  ({ author, repo }) =>
-    renderApp({ view: Option.some(View.PullRequests({ author })), repo })
+  ({ author, repo }) => renderApp({ view: Option.some(View.PullRequests({ author })), repo })
 )
 
 const cli = Command.run(ghui.pipe(Command.withSubcommands([ghuiPrs])), {

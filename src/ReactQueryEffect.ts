@@ -20,27 +20,15 @@ interface UseEffectSuspenseQueryOptions<
 > extends RQ.UseSuspenseQueryOptions<TQueryFnData, never, TData, TQueryKey> {}
 
 interface UseQueryOptions<
-  TQueryFnData extends Exit.Exit<unknown, unknown> = Exit.Exit<
-    unknown,
-    unknown
-  >,
+  TQueryFnData extends Exit.Exit<unknown, unknown> = Exit.Exit<unknown, unknown>,
   TData = TQueryFnData,
   TQueryKey extends RQ.QueryKey = readonly unknown[],
 > extends RQ.UseQueryOptions<TQueryFnData, never, TData, TQueryKey> {}
 
-export const useQuery = <
-  A,
-  E = never,
-  TQueryKey extends RQ.QueryKey = readonly unknown[],
->(
+export const useQuery = <A, E = never, TQueryKey extends RQ.QueryKey = readonly unknown[]>(
   options: UseQueryOptions<Exit.Exit<A, E>, Exit.Exit<A, E>, TQueryKey>
 ) => {
-  const result = RQ.useQuery<
-    Exit.Exit<A, E>,
-    never,
-    Exit.Exit<A, E>,
-    TQueryKey
-  >(options)
+  const result = RQ.useQuery<Exit.Exit<A, E>, never, Exit.Exit<A, E>, TQueryKey>(options)
 
   if (result.isSuccess) {
     if (Exit.isSuccess(result.data)) {
@@ -63,25 +51,10 @@ export const useQuery = <
   return result
 }
 
-export const useSuspenseQuery = <
-  A,
-  E = never,
-  TQueryKey extends RQ.QueryKey = readonly unknown[],
->(
-  options: UseEffectSuspenseQueryOptions<
-    A,
-    E,
-    Exit.Exit<A, E>,
-    Exit.Exit<A, E>,
-    TQueryKey
-  >
+export const useSuspenseQuery = <A, E = never, TQueryKey extends RQ.QueryKey = readonly unknown[]>(
+  options: UseEffectSuspenseQueryOptions<A, E, Exit.Exit<A, E>, Exit.Exit<A, E>, TQueryKey>
 ) => {
-  const result = RQ.useSuspenseQuery<
-    Exit.Exit<A, E>,
-    never,
-    Exit.Exit<A, E>,
-    TQueryKey
-  >(options)
+  const result = RQ.useSuspenseQuery<Exit.Exit<A, E>, never, Exit.Exit<A, E>, TQueryKey>(options)
 
   return result
 }
@@ -92,14 +65,9 @@ export interface UseEffectMutationOptions<
   TVariables = void,
   TOnMutateResult = unknown,
 > extends Omit<
-    RQ.UseMutationOptions<
-      Exit.Exit<A, E>,
-      Exit.Failure<A, E>,
-      TVariables,
-      TOnMutateResult
-    >,
-    'mutationFn' | 'onSuccess' | 'onError'
-  > {
+  RQ.UseMutationOptions<Exit.Exit<A, E>, Exit.Failure<A, E>, TVariables, TOnMutateResult>,
+  'mutationFn' | 'onSuccess' | 'onError'
+> {
   mutationFn: (variables: TVariables) => Promise<Exit.Exit<A, E>>
   onSuccess?: (
     data: A,
@@ -120,9 +88,7 @@ export const useMutation = <A, E, TVariables = void, TOnMutateResult = unknown>(
 ): RQ.UseMutationResult<A, Exit.Failure<A, E>, TVariables, TOnMutateResult> => {
   const { mutationFn, onSuccess, ...restOptions } = options
 
-  const wrappedMutationFn = async (
-    variables: TVariables
-  ): Promise<Exit.Exit<A, E>> => {
+  const wrappedMutationFn = async (variables: TVariables): Promise<Exit.Exit<A, E>> => {
     const exit = await mutationFn(variables)
     if (Exit.isFailure(exit)) {
       // Throw the failure so react-query treats it as an error
@@ -131,12 +97,7 @@ export const useMutation = <A, E, TVariables = void, TOnMutateResult = unknown>(
     return exit
   }
 
-  const result = RQ.useMutation<
-    Exit.Exit<A, E>,
-    Exit.Failure<A, E>,
-    TVariables,
-    TOnMutateResult
-  >({
+  const result = RQ.useMutation<Exit.Exit<A, E>, Exit.Failure<A, E>, TVariables, TOnMutateResult>({
     ...restOptions,
     mutationFn: wrappedMutationFn,
     onSuccess(data, variables, onMutateResult, context) {
@@ -151,19 +112,9 @@ export const useMutation = <A, E, TVariables = void, TOnMutateResult = unknown>(
       return {
         ...result,
         data: result.data.value,
-      } as RQ.UseMutationResult<
-        A,
-        Exit.Failure<A, E>,
-        TVariables,
-        TOnMutateResult
-      >
+      } as RQ.UseMutationResult<A, Exit.Failure<A, E>, TVariables, TOnMutateResult>
     }
   }
 
-  return result as RQ.UseMutationResult<
-    A,
-    Exit.Failure<A, E>,
-    TVariables,
-    TOnMutateResult
-  >
+  return result as RQ.UseMutationResult<A, Exit.Failure<A, E>, TVariables, TOnMutateResult>
 }

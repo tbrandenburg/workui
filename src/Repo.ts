@@ -30,9 +30,7 @@ export class Repo extends Effect.Service<Repo>()('ghui/Repo', {
       )
 
       return yield* Command.string(command).pipe(
-        Effect.flatMap(
-          Schema.decodeUnknown(Schema.compose(Schema.parseJson(), Repository))
-        ),
+        Effect.flatMap(Schema.decodeUnknown(Schema.compose(Schema.parseJson(), Repository))),
         Effect.map(({ nameWithOwner }) => Option.some(nameWithOwner)),
         Effect.catchAll(() => Effect.succeed(Option.none<string>()))
       )
@@ -52,9 +50,7 @@ export class Repo extends Effect.Service<Repo>()('ghui/Repo', {
       const command = Command.make(gh, ...args)
 
       return yield* Command.string(command).pipe(
-        Effect.flatMap(
-          Schema.decodeUnknown(Schema.compose(Schema.parseJson(), Repository))
-        ),
+        Effect.flatMap(Schema.decodeUnknown(Schema.compose(Schema.parseJson(), Repository))),
         Effect.map(({ nameWithOwner }) => Option.some(nameWithOwner)),
         Effect.catchAll(() => Effect.succeed(Option.none<string>()))
       )

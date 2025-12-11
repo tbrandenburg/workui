@@ -2,13 +2,7 @@ import { RGBA } from '@opentui/core'
 import { useTerminalDimensions } from '@opentui/react'
 import type { ReactNode } from 'react'
 
-export const Component = ({
-  children,
-  onClose,
-}: {
-  children: ReactNode
-  onClose: () => void
-}) => {
+export const Component = ({ children, onClose }: { children: ReactNode; onClose: () => void }) => {
   const dimensions = useTerminalDimensions()
   return (
     <box

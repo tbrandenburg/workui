@@ -16,9 +16,9 @@ export const Issues = () => {
   const repo = RQE.useQuery(Queries.getRepo(orgRepo))
   const issues = RQE.useQuery(Queries.issues({ repo: orgRepo }))
 
-  const [selectedIssueNumber, setSelectedIssueNumber] = useState<
-    Option.Option<number>
-  >(Option.none())
+  const [selectedIssueNumber, setSelectedIssueNumber] = useState<Option.Option<number>>(
+    Option.none()
+  )
 
   useEffect(() => {
     if (issues.isSuccess) {
@@ -27,12 +27,8 @@ export const Issues = () => {
   }, [issues.isSuccess, issues.data])
 
   const selectedIssue = Match.value([issues, selectedIssueNumber]).pipe(
-    Match.when(
-      [{ isSuccess: true }, Option.isSome],
-      ([{ data }, issueNumber]) =>
-        Option.fromNullable(
-          data.find((issue) => issue.number === issueNumber.value)
-        )
+    Match.when([{ isSuccess: true }, Option.isSome], ([{ data }, issueNumber]) =>
+      Option.fromNullable(data.find((issue) => issue.number === issueNumber.value))
     ),
     Match.orElse(() => Option.none())
   )

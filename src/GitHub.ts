@@ -11,17 +11,13 @@ import * as String from 'effect/String'
 import * as CommandArgs from './CommandArgs'
 import * as GitHubApiSchema from './GitHubApiSchema'
 
-export class PermissionError extends Data.TaggedError(
-  'ghui/GitHub/PermissionError'
-)<{}> {}
+export class PermissionError extends Data.TaggedError('ghui/GitHub/PermissionError')<{}> {}
 
 export class UnknownError extends Data.TaggedError('ghui/GitHub/UnknownError')<{
   readonly message: string
 }> {}
 
-const runString = <E, R>(
-  stream: Stream.Stream<Uint8Array, E, R>
-): Effect.Effect<string, E, R> =>
+const runString = <E, R>(stream: Stream.Stream<Uint8Array, E, R>): Effect.Effect<string, E, R> =>
   stream.pipe(Stream.decodeText(), Stream.runFold(String.empty, String.concat))
 
 const runCommand = Effect.fn(function* (command: Command.Command) {
@@ -51,113 +47,97 @@ const runCommand = Effect.fn(function* (command: Command.Command) {
   }
 })
 
-export class PullRequests extends Effect.Service<PullRequests>()(
-  'ghui/GitHub/PullRequests',
-  {
-    accessors: true,
-    sync: () => ({
-      list: Effect.fn('PullRequests.list')(function* ({
-        author,
-        repo,
-      }: {
-        author: Option.Option<string>
-        repo: Option.Option<string>
-      }) {
-        const args = yield* CommandArgs.builder()
-          .append(
-            'gh',
-            'api',
-            Option.match(repo, {
-              onSome: (repo) => `repos/${repo}/pulls`,
-              onNone: () => `repos/{owner}/{repo}/pulls`,
-            }),
-            '--paginate'
-          )
-          .build()
-
-        const result = yield* CommandArgs.toCommand(args).pipe(Command.string)
-
-        const response = yield* Schema.decodeUnknown(
-          Schema.compose(
-            Schema.parseJson(),
-            Schema.Array(GitHubApiSchema.PullRequest)
-          )
-        )(result)
-
-        return Option.match(author, {
-          onSome: (author) => response.filter((pr) => pr.user.login === author),
-          onNone: () => response,
-        })
-      }),
-    }),
-    dependencies: [BunContext.layer],
-  }
-) {}
-
-export class PullRequest extends Effect.Service<PullRequest>()(
-  'ghui/GitHub/PullRequest',
-  {
-    accessors: true,
-    sync: () => ({
-      markdownDescription: Effect.fn('PullRequest.markdownDescription')(
-        function* ({ number }: { number: number }) {
-          const args = yield* CommandArgs.builder()
-            .append('gh', 'pr', 'view', '--json', 'body', number)
-            .build()
-
-          const jsonString = yield* Command.string(CommandArgs.toCommand(args))
-
-          const readme = yield* Schema.decodeUnknown(
-            Schema.compose(
-              Schema.parseJson(),
-              Schema.Struct({ body: Schema.String })
-            )
-          )(jsonString)
-
-          return readme.body
-        }
-      ),
-      updateBranch: Effect.fn('PullRequest.updateBranch')(function* ({
-        number,
-        repo,
-        type = 'merge',
-      }: {
-        number: number
-        repo: string
-        type?: 'rebase' | 'merge'
-      }) {
-        const args = yield* CommandArgs.builder()
-          .append('gh', 'pr', 'update-branch', number, '--repo', repo)
-          .appendIf(type === 'rebase', () => '--rebase')
-          .build()
-
-        return yield* CommandArgs.toCommand(args).pipe(
-          runCommand,
-          Effect.mapError((error) => {
-            if (error._tag === 'ghui/GitHub/UnknownError') {
-              if (
-                /does not have the correct permissions/i.test(error.message)
-              ) {
-                return new PermissionError()
-              }
-            }
-            return error
-          })
+export class PullRequests extends Effect.Service<PullRequests>()('ghui/GitHub/PullRequests', {
+  accessors: true,
+  sync: () => ({
+    list: Effect.fn('PullRequests.list')(function* ({
+      author,
+      repo,
+    }: {
+      author: Option.Option<string>
+      repo: Option.Option<string>
+    }) {
+      const args = yield* CommandArgs.builder()
+        .append(
+          'gh',
+          'api',
+          Option.match(repo, {
+            onSome: (repo) => `repos/${repo}/pulls`,
+            onNone: () => `repos/{owner}/{repo}/pulls`,
+          }),
+          '--paginate'
         )
-      }),
+        .build()
+
+      const result = yield* CommandArgs.toCommand(args).pipe(Command.string)
+
+      const response = yield* Schema.decodeUnknown(
+        Schema.compose(Schema.parseJson(), Schema.Array(GitHubApiSchema.PullRequest))
+      )(result)
+
+      return Option.match(author, {
+        onSome: (author) => response.filter((pr) => pr.user.login === author),
+        onNone: () => response,
+      })
     }),
-    dependencies: [BunContext.layer],
-  }
-) {}
+  }),
+  dependencies: [BunContext.layer],
+}) {}
+
+export class PullRequest extends Effect.Service<PullRequest>()('ghui/GitHub/PullRequest', {
+  accessors: true,
+  sync: () => ({
+    markdownDescription: Effect.fn('PullRequest.markdownDescription')(function* ({
+      number,
+    }: {
+      number: number
+    }) {
+      const args = yield* CommandArgs.builder()
+        .append('gh', 'pr', 'view', '--json', 'body', number)
+        .build()
+
+      const jsonString = yield* Command.string(CommandArgs.toCommand(args))
+
+      const readme = yield* Schema.decodeUnknown(
+        Schema.compose(Schema.parseJson(), Schema.Struct({ body: Schema.String }))
+      )(jsonString)
+
+      return readme.body
+    }),
+    updateBranch: Effect.fn('PullRequest.updateBranch')(function* ({
+      number,
+      repo,
+      type = 'merge',
+    }: {
+      number: number
+      repo: string
+      type?: 'rebase' | 'merge'
+    }) {
+      const args = yield* CommandArgs.builder()
+        .append('gh', 'pr', 'update-branch', number, '--repo', repo)
+        .appendIf(type === 'rebase', () => '--rebase')
+        .build()
+
+      return yield* CommandArgs.toCommand(args).pipe(
+        runCommand,
+        Effect.mapError((error) => {
+          if (error._tag === 'ghui/GitHub/UnknownError') {
+            if (/does not have the correct permissions/i.test(error.message)) {
+              return new PermissionError()
+            }
+          }
+          return error
+        })
+      )
+    }),
+  }),
+  dependencies: [BunContext.layer],
+}) {}
 
 export class Issues extends Effect.Service<Issues>()('ghui/GitHub/Issues', {
   accessors: true,
   sync: () => ({
-    list: Effect.fn('Issues.list')(function* ({
-      repo,
-    }: {
-      repo: Option.Option<string>
-    }) {
+    list: Effect.fn('Issues.list')(function* ({ repo }: { repo: Option.Option<string> }) {
       const args = yield* CommandArgs.builder()
         .append(
           'gh',

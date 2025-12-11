@@ -35,9 +35,7 @@ export const pullRequestMarkdownDescription = (options: {
     queryKey: ['pull', options, 'markdownDescription'],
     queryFn: Option.match(options.number, {
       onSome: (number) => () =>
-        AppRuntime.runPromiseExit(
-          GitHub.PullRequest.markdownDescription({ ...options, number })
-        ),
+        AppRuntime.runPromiseExit(GitHub.PullRequest.markdownDescription({ ...options, number })),
       onNone: () => skipToken,
     }),
   })

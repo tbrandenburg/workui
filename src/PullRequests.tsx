@@ -19,11 +19,7 @@ import { useToast } from './Toast'
 
 const elementOrder = ['list', 'detail'] as const
 
-export const PullRequests = ({
-  author: initialAuthor,
-}: {
-  author: Option.Option<string>
-}) => {
+export const PullRequests = ({ author: initialAuthor }: { author: Option.Option<string> }) => {
   const orgRepo = useCurrentRepo()
   // TODO filter author?
   const [author, _setAuthor] = useState<Option.Option<string>>(initialAuthor)
@@ -38,9 +34,7 @@ export const PullRequests = ({
   const [elementFocusIndex, setElementFocusIndex] = useState(0)
   const focusedElement = elementOrder[elementFocusIndex % elementOrder.length]
 
-  const [selectedPrNumber, setSelectedPrNumber] = useState<
-    Option.Option<number>
-  >(Option.none())
+  const [selectedPrNumber, setSelectedPrNumber] = useState<Option.Option<number>>(Option.none())
 
   const selectedPr = Match.value([pulls, selectedPrNumber]).pipe(
     Match.when([{ isSuccess: true }, Option.isSome], ([{ data }, prNumber]) =>
@@ -65,14 +59,8 @@ export const PullRequests = ({
   const showToast = useToast((state) => state.showToast)
 
   const updateBranch = RQE.useMutation({
-    mutationFn: (input: {
-      repo: string
-      number: number
-      type: 'rebase' | 'merge'
-    }) =>
-      AppRuntime.runPromiseExit(
-        GitHub.PullRequest.updateBranch(input).pipe(Effect.scoped)
-      ),
+    mutationFn: (input: { repo: string; number: number; type: 'rebase' | 'merge' }) =>
+      AppRuntime.runPromiseExit(GitHub.PullRequest.updateBranch(input).pipe(Effect.scoped)),
     onSuccess(_, { repo, number, type }) {
       showToast({
         kind: 'success',
@@ -105,27 +93,23 @@ export const PullRequests = ({
     }
     if (key.name === 'm' && key.shift) {
       Match.value([repo, selectedPrNumber]).pipe(
-        Match.when(
-          [{ isSuccess: true, data: Option.isSome }, Option.isSome],
-          ([repo, number]) =>
-            updateBranch.mutate({
-              repo: repo.data.value,
-              number: number.value,
-              type: 'merge',
-            })
+        Match.when([{ isSuccess: true, data: Option.isSome }, Option.isSome], ([repo, number]) =>
+          updateBranch.mutate({
+            repo: repo.data.value,
+            number: number.value,
+            type: 'merge',
+          })
         )
       )
     }
     if (key.name === 'r' && key.shift) {
       Match.value([repo, selectedPrNumber]).pipe(
-        Match.when(
-          [{ isSuccess: true, data: Option.isSome }, Option.isSome],
-          ([repo, number]) =>
-            updateBranch.mutate({
-              repo: repo.data.value,
-              number: number.value,
-              type: 'rebase',
-            })
+        Match.when([{ isSuccess: true, data: Option.isSome }, Option.isSome], ([repo, number]) =>
+          updateBranch.mutate({
+            repo: repo.data.value,
+            number: number.value,
+            type: 'rebase',
+          })
         )
       )
     }
