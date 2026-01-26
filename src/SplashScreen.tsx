@@ -2,15 +2,16 @@ import { Markdown } from './Markdown'
 import { md } from './tags'
 
 const welcomeMessage = md`
-welcome to ghui, the TUI for [gh](https://cli.github.com)
+welcome to workui, the TUI for [work CLI](https://github.com/tbrandenburg/work/)
 
-If you're here, it's because you ran \`ghui\` without any arguments _and_ you aren't in a GitHub repo directory.
+If you're here, it's because you ran \`workui\` without any arguments _and_ you don't have a configured work context.
 
 Here's how to remedy this:
 
-- Run \`ghui prs\` in a repo that has been pushed to GitHub.
-- Run \`ghui prs --repo macklinu/ghui\` from any directory, where \`--repo owner/name\` sets the default repo context for all commands.
-- Run a command that doesn't depend on current repo context, like \`ghui prs --author @me\` to see all of your open PRs.
+- Configure a context: \`work context add my-project --tool github --repo owner/repo\`
+- Set the context: \`work context set my-project\`
+- Run \`workui items\` to view work items in the current context.
+- Run commands that work across contexts, like \`workui items @my-project\` to specify context explicitly.
 `.replaceAll(/\\/g, '')
 
 export const SplashScreen = () => (
@@ -24,7 +25,7 @@ export const SplashScreen = () => (
     flexDirection='column'
     gap={2}
   >
-    <ascii-font text='workui' font='small' />
+    <ascii-font text='workui' font='tiny' />
     <Markdown>{welcomeMessage}</Markdown>
   </box>
 )
