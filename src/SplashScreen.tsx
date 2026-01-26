@@ -24,7 +24,7 @@ export const SplashScreen = () => (
     flexDirection='column'
     gap={2}
   >
-    <ascii-font text='ghui' font='tiny' />
+    <ascii-font text='workui' font='small' />
     <Markdown>{welcomeMessage}</Markdown>
   </box>
 )

@@ -103,7 +103,7 @@ export const PullRequests = ({ author: initialAuthor }: { author: Option.Option<
 
   return (
     <box padding={1} flexDirection='column'>
-      <ascii-font text='ghui' font='tiny' marginBottom={2} />
+      <ascii-font text='workui' font='small' marginBottom={2} />
       <box flexDirection='row' alignItems='center' gap={1}>
         {Result.builder(repo)
           .onWaiting(() => <Loading kind='dots' />)
