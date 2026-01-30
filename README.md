@@ -5,7 +5,9 @@
 > [!IMPORTANT]
 > This is very much a work in progress. Please open an issue if you have feature requests or bug reports.
 
-![workui demo screenshot](./media/ghui-screenshot.png)
+<div align="center">
+<img src="https://raw.githubusercontent.com/tbrandenburg/workui/main/docs/workui.png" style="max-width: 100%;">
+</div>
 
 ## Overview
 
